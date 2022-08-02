@@ -39,8 +39,8 @@ d_train_20_labels = np.empty(shape=20, dtype=int)
 d_train_20 = np.empty(shape=[20, 2])
 d_train_200_labels = np.empty(shape=200, dtype=int)
 d_train_200 = np.empty(shape=[200, 2])
-d_train_1000_labels = np.empty(shape=1000, dtype=int)
-d_train_1000 = np.empty(shape=[1000, 2])
+d_train_2000_labels = np.empty(shape=2000, dtype=int)
+d_train_2000 = np.empty(shape=[2000, 2])
 d_valid_10000_labels = np.empty(shape=10000, dtype=int)
 d_valid_10000 = np.empty(shape=[10000, 2])
 
@@ -73,7 +73,7 @@ def generate_sl(samps, labs, prior0, A1, A2, Mus, Sigmas):
 
 generate_sl(d_train_20, d_train_20_labels, q1_p0, q1_a1, q1_a2, q1_MUs, q1_Sigmas)
 generate_sl(d_train_200, d_train_200_labels, q1_p0, q1_a1, q1_a2, q1_MUs, q1_Sigmas)
-generate_sl(d_train_1000, d_train_1000_labels, q1_p0, q1_a1, q1_a2, q1_MUs, q1_Sigmas)
+generate_sl(d_train_2000, d_train_2000_labels, q1_p0, q1_a1, q1_a2, q1_MUs, q1_Sigmas)
 generate_sl(d_valid_10000, d_valid_10000_labels, q1_p0, q1_a1, q1_a2, q1_MUs, q1_Sigmas)
 
 # Useful to have
@@ -111,8 +111,8 @@ def display_samples(samps, labs):
 
 # display_samples(d_train_20, d_train_20_labels)
 # display_samples(d_train_200, d_train_200_labels)
-# display_samples(d_train_1000, d_train_1000_labels)
-display_samples(d_valid_10000, d_valid_10000_labels)
+# display_samples(d_train_2000, d_train_2000_labels)
+# display_samples(d_valid_10000, d_valid_10000_labels)
 
 
 def multivariate_gaussian_pdf(x, mu, sigma):
@@ -244,21 +244,10 @@ def question1_part1(
     sigma03_est,
 ):
     # # Print estimates of parameters
-    # print("p0: %s, p1: %s" % (str(p0_est), str(p1_est)))
-    # print("nw01_hat: %s, m01_hat: %s")
-    # print(cov01_hat: %s\nw02_hat: %s, m02_hat: %s, "
-    #     "cov02_hat: %s\nm1_hat: %s, cov1_hat: %s"
-
-    #         str(a1_est),
-    #         str(mu01_est),
-    #         str(sigma01_est),
-    #         str(a2_est),
-    #         str(mu02_est),
-    #         str(sigma02_est),
-    #         str(mu03_est),
-    #         str(sigma03_est),
-    #     )
-    # )
+    print("p0: %s, p1: %s" % (str(p0_est), str(p1_est)))
+    print("a1 estimate: %s, mu1 estimate: %s, sigma1 estimate %s" % (str(a1_est), str(mu01_est), str(sigma01_est)))
+    print("a2 estimate: %s, mu2 estimate: %s, sigma2 estimate %s" % (str(a2_est), str(mu02_est), str(sigma02_est)))
+    print("mu3 estimate: %s, sigma3 estimate %s" % (str(mu03_est), str(sigma03_est)))
 
     # Calculate likelihood ratios of all samples using knowledge of pdf. Then, generate ROC curve
 
@@ -396,7 +385,7 @@ def question1_part1(
     )
     ax_bound.set_title("Boundary for Deciding Classes 0 (Blue) and 1 (Red)")
     contour_est = ax_bound.contour(
-        x_points, y_points, z_grid, [b_gamma[0]], colors=["lime"], linewidths=2
+        x_points, y_points, z_grid, [b_gamma[0]], colors=["green"], linewidths=2
     )
     contour_theoretical = plot_theo_bound(ax_bound)
     # ontour_est_legend, _ = contour_est.legend_elements()
@@ -407,14 +396,14 @@ def question1_part1(
     #     bbox_to_anchor=(1.1, 1),
     # )
     plt.show()
-    print("Albert")
+    #print("Albert")
 
 
 question1_part1(
     q1_p0, q1_p1, q1_a1, q1_mu1, q1_sigma1, q1_a1, q1_mu2, q1_sigma2, q1_mu3, q1_sigma3
 )
 
-def estimate_parameters(gausses, sample, inits, threshold):
+def estimate_parameters_mix(samples, gausses, inits, threshold):
     #threshold is chosen through trial and error
 
     #store the samples locally in the functions so I can use them as I see fit
@@ -433,68 +422,173 @@ def estimate_parameters(gausses, sample, inits, threshold):
         #at this point I do not know what the priors are supposed to be, so make them all equal 
         priors = [1 / gausses] * gausses
         #                                                                                 #need axis paramter to get correct mean
-        mus = [mean(samps[round(G*num_samps/gausses):round((G+1)*num_samps/gausses-1)],axis=0,) for G in range(gausses)]
-        sigmas = [cov(transpose(samps[round(i*num_samps/gausses):round((i+1)*num_samps/gausses-1)])) for G in range(gausses)]
+        mus = [np.mean(samps[round(G*num_samps/gausses):round((G+1)*num_samps/gausses-1)],axis=0,) for G in range(gausses)]
+        sigmas = [np.cov(np.transpose(samps[round(G*num_samps/gausses):round((G+1)*num_samps/gausses-1)])) for G in range(gausses)]
 
         #Boolean to track if I am done iterating or not
         convergance_huh = False
         while not convergance_huh:
             # generate the liklihoods given an estimate of the Gaussian Varaibles, works for gaussian mixture model
             # G by samples or samples by G
-            potenial_class_llhoods = [(multiply(priors[G],multivariate_gaussian_pdf(samps, mus[i], sigmas[i], num_samps)))for G in range(gausses)]
+            potenial_class_llhoods = [(np.multiply(priors[G],multivariate_gaussian_pdf(samps, mus[G], sigmas[G])))for G in range(gausses)]
             # sums up the columns of the potential class llhoods because of the axis 0 optional parameter
-            pcl_col_sums = sum(potenial_class_llhoods, axis=0)
+            pcl_col_sums = np.sum(potenial_class_llhoods, axis=0)
             # normalized (unsure if mathatically correct term)
             # divides each element by the sum of the column in question 
-            class_llhoods_per_samp = [[potenial_class_llhoods[i][j] / pcl_col_sums[j] for j in range(num_samps)]for i in range(gausses)]
-            #create new potential prior and means based on the new class llhoods
-            new_priors = [mean(class_llhoods_per_samp[i]) for i in range(gausses)]
-            new_mus = [divide(sum([multiply(samps[j], class_llhoods_per_samp[i][j])for j in range(num_samps)],axis=0), sum(class_llhoods_per_samp[i])) for i in range(num_gaussians)]
+            class_llhoods_per_samp = [[potenial_class_llhoods[G][S] / pcl_col_sums[S] for S in range(num_samps)]for G in range(gausses)]
+            #create new potential prior and np.means based on the new class llhoods
+            new_priors = [np.mean(class_llhoods_per_samp[i]) for i in range(gausses)]
+            new_mus = [np.divide(np.sum([np.multiply(samps[j], class_llhoods_per_samp[i][j])for j in range(num_samps)],axis=0), np.sum(class_llhoods_per_samp[i])) for i in range(gausses)]
             new_sigmas = [
-                add(
-                    divide(
-                        sum(
-                            [multiply(class_llhoods_per_samp[i][j], outer((subtract(samps[j], new_mus[i])),
-                                        transpose(subtract(samps[j], new_mus[i])))) for j in range(num_samps)],
+                np.add(
+                    np.divide(
+                        np.sum(
+                            [np.multiply(class_llhoods_per_samp[i][j], np.outer((np.subtract(samps[j], new_mus[i])),
+                                        np.transpose(np.subtract(samps[j], new_mus[i])))) for j in range(num_samps)],
                             axis=0,
                         ),
-                        sum(class_llhoods_per_samp[i]),
+                        np.sum(class_llhoods_per_samp[i]),
                     ),
-                    0.0000000001 * identity(len(samples[0]))) for i in range(gausses)]
+                    0.0000000001 * np.identity(len(samples[0]))) for i in range(gausses)]
             
             # Did we converge on this iteration?
             # basically looking at average error
             if (
-                mean(absolute(subtract(new_priors, priors)))
-                + mean(absolute(subtract(new_mus, mus)))
-                + mean(absolute(subtract(new_sigmas, sigmas)))
+                np.mean(np.absolute(np.subtract(new_priors, priors)))
+                + np.mean(np.absolute(np.subtract(new_mus, mus)))
+                + np.mean(np.absolute(np.subtract(new_sigmas, sigmas)))
                 < threshold
             ):
                 convergance_huh = True
             # Reassign the prior, mu, and sigmas since we just spent all that time calculating them 
             priors = new_priors
             mus = new_mus
-            sigmas = new_sgimas
-            print("Albert")
+            sigmas = new_sigmas
+            #print("Albert")
 
-        prob_dens_funcs = zeros(num_samps)
+        prob_dens_funcs = np.zeros(num_samps)
 
         for G in range(gausses):
-            store_pdf = add(
+            store_pdf = np.add(
                 prob_dens_funcs,
-                multiply(
+                np.multiply(
                     priors[G], multivariate_gaussian_pdf(samps, mus[G], sigmas[G])
                 ),
             )
             prob_dens_funcs = store_pdf
-        log_likelihood = sum(log(prob_dens_funcs))
-        #first time through this will trip because of the value chosen to initilize max_log_likelihood
-        if log_likelihood > max_log_likelihood:
-            max_log_likelihood = log_likelihood
+        log_likelihood = np.sum(np.log(prob_dens_funcs))
+        #first time through this will trip because of the value chosen to initilize big_log
+        if log_likelihood > big_log:
+            big_log = log_likelihood
             max_priors = priors
             max_mus = mus
             max_sigmas = sigmas
 
-    return max_priors, max_mus, max_sigmas, max_log_likelihood
+    return max_priors, max_mus, max_sigmas, big_log
+
+def estimate_parameters_implementation(samples, sample_labels):
+    samps_class_0 = [samples[i] for i in range(len(samples)) if sample_labels[i] == 0]
+    samps_class_1 = [samples[i] for i in range(len(samples)) if sample_labels[i] == 1]
+    
+    est_p0 = len(samps_class_0) / len(samples)
+    est_p1 = len(samps_class_1) / len(samples)
+    
+    # Estimate class 0 means and covariances as gaussian mixture model of 2 gaussians
+    # from estimate_parameters function
+    # the 7 and 0.000025 parameters were chosen on trial and error where the returns weren't diminishing
+    est_a0, est_mu0, est_sigma0, dud = estimate_parameters_mix(
+        samps_class_0, 2, 7, 0.000025
+    )
+    # Estimate class 1 means and covariances. Can just take sample mean and covariances due to single gaussian model
+    est_mu1 = np.mean(samps_class_0, axis=0)
+    est_sigma1 = np.cov(np.transpose(samps_class_1))
+    
+    return (
+        est_p0,
+        est_p1,
+        est_a0[0],
+        est_mu0[0],
+        est_sigma0[0],
+        est_a0[1],
+        est_mu0[1],
+        est_sigma0[1],
+        est_mu1,
+        est_sigma1,
+    )
+
+(
+    p0_trained_2000,
+    p1_trained_2000,
+    a1_trained_2000,
+    mu1_trained_2000,
+    sigma1_trained_2000,
+    a2_trained_2000,
+    mu2_trained_2000,
+    sigma2_trained_2000,
+    mu3_trained_2000,
+    sigma3_trained_2000,
+) = estimate_parameters_implementation(d_train_2000, d_train_2000_labels)
+question1_part1(
+    p0_trained_2000,
+    p1_trained_2000,
+    a1_trained_2000,
+    mu1_trained_2000,
+    sigma1_trained_2000,
+    a2_trained_2000,
+    mu2_trained_2000,
+    sigma2_trained_2000,
+    mu3_trained_2000,
+    sigma3_trained_2000,
+)
+
+(
+    p0_trained_200,
+    p1_trained_200,
+    a1_trained_200,
+    mu1_trained_200,
+    sigma1_trained_200,
+    a2_trained_200,
+    mu2_trained_200,
+    sigma2_trained_200,
+    mu3_trained_200,
+    sigma3_trained_200,
+) = estimate_parameters_implementation(d_train_200, d_train_200_labels)
+question1_part1(
+    p0_trained_200,
+    p1_trained_200,
+    a1_trained_200,
+    mu1_trained_200,
+    sigma1_trained_200,
+    a2_trained_200,
+    mu2_trained_200,
+    sigma2_trained_200,
+    mu3_trained_200,
+    sigma3_trained_200,
+)
+
+(
+    p0_trained_20,
+    p1_trained_20,
+    a1_trained_20,
+    mu1_trained_20,
+    sigma1_trained_20,
+    a2_trained_20,
+    mu2_trained_20,
+    sigma2_trained_20,
+    mu3_trained_20,
+    sigma3_trained_20,
+) = estimate_parameters_implementation(d_train_20, d_train_20_labels)
+question1_part1(
+    p0_trained_20,
+    p1_trained_20,
+    a1_trained_20,
+    mu1_trained_20,
+    sigma1_trained_20,
+    a2_trained_20,
+    mu2_trained_20,
+    sigma2_trained_20,
+    mu3_trained_20,
+    sigma3_trained_20,
+)
 
 print("Hello World!")
